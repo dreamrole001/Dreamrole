@@ -1,0 +1,31 @@
+JOB DETAILS
+Job Title,dev
+Company,wipro
+Location,satara
+Job Type,Part-time
+Required Skills,["java"]
+
+SHORTLISTED CANDIDATES
+Full Name,Email,Login Status,Match Percentage,Experience (Years),Education Level
+"Candidate",aarav.kulkarni748@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: fuJm!bOpa59Y",,,
+"Candidate",aarav.more275@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: S#asAxbJ4lRq",,,
+"Candidate",aarav.more666@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: wM!16dA0z&bJ",,,
+"Candidate",aarav.patil972@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: A@Z!zhyTDkg9",,,
+"Candidate",aarav.patil258@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: Gxx0pLJMnE3M",,,
+"Candidate",aarav.sharma724@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: E*jl$bJKuKgq",,,
+"Candidate",aditya.gupta575@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: 4$qbIg@BVkJq",,,
+
+LOGIN INSTRUCTIONS
+URL,http://localhost:3000/login
+
+IMPORTANT NOTES:
+- EXISTING USERS: Please login with your existing DreamRole email and password
+- NEW USERS: Use the generated password above for first time login
+- All shortlisted candidates can now take aptitude tests assigned by the recruiter

@@ -1,0 +1,35 @@
+JOB DETAILS
+Job Title,backend devloper
+Company,wipro
+Location,mumbai
+Job Type,Full-time
+Required Skills,["python", "java"]
+
+SHORTLISTED CANDIDATES
+Full Name,Email,Login Status,Match Percentage,Experience (Years),Education Level
+"Candidate",vihaan.pawar769@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: LQB8M!B0EyOp",,,
+"Candidate",vihaan.verma594@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: guABFXadl1Zn",,,
+"Candidate",vivaan.gupta940@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: 87E#R0RBBWQx",,,
+"Candidate",vivaan.gupta188@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: JsNu7R&z2*l@",,,
+"Candidate",vivaan.jadhav203@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: W9!Byn#yPAhE",,,
+"Candidate",vivaan.patil930@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: DP&Z7BgECiS2",,,
+"Candidate",aarav.kulkarni766@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: GZ5djEMIt9az",,,
+"Candidate",aarav.sharma943@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: u1#Yw$Ft$HkZ",,,
+"Candidate",ishaan.patil869@gmail.com,"NEW USER - Use generated password below",100.0%,0,"Bachelor's"
+,,"Password: e25YfKiq1dDd",,,
+
+LOGIN INSTRUCTIONS
+URL,http://localhost:3000/login
+
+IMPORTANT NOTES:
+- EXISTING USERS: Please login with your existing DreamRole email and password
+- NEW USERS: Use the generated password above for first time login
+- All shortlisted candidates can now take aptitude tests assigned by the recruiter

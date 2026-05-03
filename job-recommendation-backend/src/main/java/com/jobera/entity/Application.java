@@ -1,3 +1,4 @@
+// src/main/java/com/jobera/entity/Application.java
 package com.jobera.entity;
 
 import java.time.LocalDateTime;
@@ -25,7 +26,7 @@ public class Application {
     private User user;
     
     @ManyToOne
-    @JoinColumn(name = "job_posting_id", nullable = false)
+    @JoinColumn(name = "job_posting_id", nullable = true)  // IMPORTANT: Allow null for external candidates
     private JobPosting jobPosting;
     
     private LocalDateTime applicationDate;
@@ -72,7 +73,7 @@ public class Application {
     @Column(name = "viewed_at")
     private LocalDateTime viewedAt;
     
-    // NEW FIELDS FOR RESUME MATCHING
+    // Resume matching fields
     @Column(name = "match_percentage")
     private Double matchPercentage = 0.0;
     
@@ -210,7 +211,6 @@ public class Application {
     public LocalDateTime getViewedAt() { return viewedAt; }
     public void setViewedAt(LocalDateTime viewedAt) { this.viewedAt = viewedAt; }
     
-    // NEW GETTERS AND SETTERS FOR RESUME MATCHING
     public Double getMatchPercentage() { return matchPercentage; }
     public void setMatchPercentage(Double matchPercentage) { this.matchPercentage = matchPercentage; }
     
@@ -226,7 +226,7 @@ public class Application {
     public String getResumeParsedText() { return resumeParsedText; }
     public void setResumeParsedText(String resumeParsedText) { this.resumeParsedText = resumeParsedText; }
     
-    // HELPER METHODS
+    // Helper Methods
     public String getSafeApplicantName() {
         if (this.applicantName != null && !this.applicantName.trim().isEmpty()) {
             return this.applicantName;
@@ -246,6 +246,15 @@ public class Application {
             return this.applicantPhone;
         }
         return this.user != null ? this.user.getPhone() : "No phone provided";
+    }
+    
+    public boolean hasResume() {
+        return this.resumeFilePath != null && !this.resumeFilePath.trim().isEmpty();
+    }
+    
+    public boolean isRecent() {
+        return applicationDate != null && 
+               applicationDate.isAfter(LocalDateTime.now().minusDays(7));
     }
     
     // Status helper methods
@@ -304,28 +313,12 @@ public class Application {
         this.statusUpdatedAt = LocalDateTime.now();
     }
     
-    // Helper method to check if application has resume
-    public boolean hasResume() {
-        return this.resumeFilePath != null && !this.resumeFilePath.trim().isEmpty();
-    }
-    
-    // Helper method to get formatted application date
-    public String getFormattedApplicationDate() {
-        return applicationDate != null ? applicationDate.toString() : "Unknown date";
-    }
-    
-    // Helper method to check if application is recent (within 7 days)
-    public boolean isRecent() {
-        return applicationDate != null && 
-               applicationDate.isAfter(LocalDateTime.now().minusDays(7));
-    }
-    
     @Override
     public String toString() {
         return "Application{" +
                 "id=" + id +
                 ", applicantName='" + getSafeApplicantName() + '\'' +
-                ", jobTitle='" + (jobPosting != null ? jobPosting.getTitle() : "No Job") + '\'' +
+                ", jobTitle='" + (jobPosting != null ? jobPosting.getTitle() : "External Job") + '\'' +
                 ", status='" + status + '\'' +
                 ", applicationDate=" + applicationDate +
                 ", hasResume=" + hasResume() +

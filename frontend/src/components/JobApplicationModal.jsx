@@ -17,6 +17,8 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
   const [jobId, setJobId] = useState('');
   const [hasResume, setHasResume] = useState(false);
   const [fetchAttempted, setFetchAttempted] = useState(false);
+  const [uploadedResumeId, setUploadedResumeId] = useState(null);
+  const [uploadedResumePath, setUploadedResumePath] = useState('');
 
   const currentUser = JSON.parse(localStorage.getItem('user'));
 
@@ -33,7 +35,27 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
     }
   }, [job]);
 
-  // Fetch user's latest resume data
+  // ── helper: parse skills from whatever the backend returns ──────────────
+  const parseSkills = (rawSkills) => {
+    if (!rawSkills) return [];
+    try {
+      if (typeof rawSkills === 'string') {
+        try {
+          const parsed = JSON.parse(rawSkills);
+          if (Array.isArray(parsed)) return parsed.map(s => s.trim()).filter(Boolean);
+        } catch {
+          // not JSON – try comma-separated text
+          const cleaned = rawSkills.replace(/[\[\]"]/g, '');
+          return cleaned.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      }
+      if (Array.isArray(rawSkills)) return rawSkills.map(s => String(s).trim()).filter(Boolean);
+    } catch (e) {
+      console.error('Error parsing skills:', e);
+    }
+    return [];
+  };
+
   const fetchUserLatestResume = async () => {
     if (!currentUser || !currentUser.id) {
       console.log('No current user found');
@@ -45,69 +67,30 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
     try {
       setIsLoadingResume(true);
       console.log('Fetching latest resume for user:', currentUser.id);
-      
+
       const response = await api.get(`/resumes/user/${currentUser.id}/latest`);
       console.log('Resume API response:', response);
-      
+
       if (response.data && response.data.id) {
         const resumeData = response.data;
         console.log('✅ Resume data received:', resumeData);
-        
-        // Parse skills from JSON
-        let parsedSkills = [];
-        if (resumeData.skills) {
-          try {
-            console.log('Raw skills data:', resumeData.skills);
-            
-            if (typeof resumeData.skills === 'string') {
-              try {
-                parsedSkills = JSON.parse(resumeData.skills);
-                console.log('Parsed from JSON string:', parsedSkills);
-              } catch (jsonError) {
-                console.log('JSON parse failed, trying text extraction');
-                const skillsText = resumeData.skills.replace(/[\[\]"]/g, '');
-                parsedSkills = skillsText.split(',').map(s => s.trim()).filter(s => s);
-                console.log('Extracted from text:', parsedSkills);
-              }
-            } else if (Array.isArray(resumeData.skills)) {
-              parsedSkills = resumeData.skills;
-              console.log('Skills already array:', parsedSkills);
-            }
-            
-            if (Array.isArray(parsedSkills)) {
-              parsedSkills = parsedSkills
-                .filter(skill => skill && typeof skill === 'string')
-                .map(skill => skill.trim());
-            }
-          } catch (e) {
-            console.error('Error processing skills:', e);
-            parsedSkills = [];
-          }
-        }
-        
+
+        setUploadedResumeId(resumeData.id);
+        setUploadedResumePath(resumeData.filePath || '');
+
+        const parsedSkills = parseSkills(resumeData.skills);
         console.log(`✅ Found ${parsedSkills.length} skills from resume:`, parsedSkills);
-        
-        // Get experience and education
-        let experienceValue = resumeData.experienceYears;
-        if (experienceValue === null || experienceValue === undefined) {
-          experienceValue = 0;
-        }
-        
-        let educationValue = resumeData.educationLevel;
-        if (!educationValue) {
-          educationValue = "Bachelor's Degree";
-        }
-        
-        console.log('Experience from resume:', experienceValue);
-        console.log('Education from resume:', educationValue);
-        
-        setFormData({
-          coverLetter: formData.coverLetter,
-          skills: parsedSkills.length > 0 ? parsedSkills : ['JavaScript', 'React', 'Node.js'],
+
+        let experienceValue = resumeData.experienceYears ?? 0;
+        let educationValue  = resumeData.educationLevel  || "Bachelor's Degree";
+
+        setFormData(prev => ({
+          ...prev,
+          skills:     parsedSkills.length > 0 ? parsedSkills : prev.skills,
           experience: experienceValue.toString(),
-          education: educationValue
-        });
-        
+          education:  educationValue
+        }));
+
         setHasResume(parsedSkills.length > 0);
         console.log('✅ Form populated with resume data successfully');
       } else {
@@ -116,19 +99,10 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
       }
     } catch (error) {
       console.error('❌ Error fetching resume:', error);
-      console.log('Error details:', error.response?.data || error.message);
-      
-      // Check if it's a 404 (no resume found) or 500 (server error)
-      if (error.response?.status === 404) {
-        console.log('No resume found for user (404)');
-        setDefaultFormData();
-      } else if (error.response?.status === 500) {
-        console.log('Server error when fetching resume');
-        setDefaultFormData();
+      if (error.response?.status === 500) {
         setError('Server error when loading resume. Using default values.');
-      } else {
-        setDefaultFormData();
       }
+      setDefaultFormData();
     } finally {
       setIsLoadingResume(false);
       setFetchAttempted(true);
@@ -136,39 +110,30 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
   };
 
   const setDefaultFormData = () => {
-    setFormData({
-      coverLetter: formData.coverLetter,
-      skills: ['JavaScript', 'React', 'Node.js'],
-      experience: '2',
-      education: "Bachelor's Degree"
-    });
+    setFormData(prev => ({
+      ...prev,
+      skills:     prev.skills.length > 0 ? prev.skills : ['JavaScript', 'React', 'Node.js'],
+      experience: prev.experience || '2',
+      education:  prev.education  || "Bachelor's Degree"
+    }));
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleAddSkill = () => {
     if (newSkill.trim()) {
       const skillToAdd = newSkill.trim();
       if (!formData.skills.includes(skillToAdd)) {
-        setFormData({
-          ...formData,
-          skills: [...formData.skills, skillToAdd]
-        });
+        setFormData({ ...formData, skills: [...formData.skills, skillToAdd] });
         setNewSkill('');
       }
     }
   };
 
   const handleRemoveSkill = (skillToRemove) => {
-    setFormData({
-      ...formData,
-      skills: formData.skills.filter(skill => skill !== skillToRemove)
-    });
+    setFormData({ ...formData, skills: formData.skills.filter(s => s !== skillToRemove) });
   };
 
   const handleKeyPress = (e) => {
@@ -178,69 +143,78 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
     }
   };
 
+  // ── Resume upload: upload file → save resumeId/Path → re-fetch & extract ─
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     setResumeFile(file);
-    
+
     try {
       setIsLoadingResume(true);
       console.log('Uploading new resume:', file.name);
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const uploadResponse = await api.post(`/resumes/upload/${currentUser.id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
+
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const uploadResponse = await api.post(
+        `/resumes/upload/${currentUser.id}`,
+        uploadFormData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
       console.log('Upload response:', uploadResponse);
-      
-      if (uploadResponse.data) {
-        alert('Resume uploaded successfully! Fetching updated data...');
-        
-        // Wait a moment for processing
-        setTimeout(async () => {
-          try {
-            const resumeResponse = await api.get(`/resumes/user/${currentUser.id}/latest`);
-            console.log('Updated resume data:', resumeResponse);
-            
-            if (resumeResponse.data && resumeResponse.data.id) {
-              const resumeData = resumeResponse.data;
-              
-              // Parse skills
-              let parsedSkills = [];
-              if (resumeData.skills) {
-                try {
-                  if (typeof resumeData.skills === 'string') {
-                    parsedSkills = JSON.parse(resumeData.skills);
-                  } else if (Array.isArray(resumeData.skills)) {
-                    parsedSkills = resumeData.skills;
-                  }
-                } catch (e) {}
-              }
-              
-              setFormData(prev => ({
-                ...prev,
-                skills: parsedSkills.length > 0 ? parsedSkills : prev.skills,
-                experience: resumeData.experienceYears?.toString() || prev.experience,
-                education: resumeData.educationLevel || prev.education
-              }));
-              
-              setHasResume(true);
-              alert(`Resume processed! Found ${parsedSkills.length} skills.`);
-            }
-          } catch (fetchError) {
-            console.error('Error fetching updated resume:', fetchError);
-            alert('Resume uploaded but couldn\'t fetch updated data. Please refresh the page.');
-          } finally {
-            setIsLoadingResume(false);
-          }
-        }, 2000);
+
+      if (uploadResponse.data && uploadResponse.data.id) {
+        // ✅ Save resume id & path from upload response
+        setUploadedResumeId(uploadResponse.data.id);
+        setUploadedResumePath(uploadResponse.data.filePath || '');
       }
+
+      alert('Resume uploaded successfully! Fetching updated data...');
+
+      // Wait for backend to finish parsing the resume
+      setTimeout(async () => {
+        try {
+          const resumeResponse = await api.get(`/resumes/user/${currentUser.id}/latest`);
+          console.log('Updated resume data:', resumeResponse);
+
+          if (resumeResponse.data && resumeResponse.data.id) {
+            const resumeData = resumeResponse.data;
+
+            // Keep the upload-response id/path if the latest endpoint returns a newer record
+            setUploadedResumeId(resumeData.id);
+            setUploadedResumePath(resumeData.filePath || '');
+
+            // ✅ Use shared parseSkills helper (handles JSON string, plain text, array)
+            const parsedSkills = parseSkills(resumeData.skills);
+
+            setFormData(prev => ({
+              ...prev,
+              skills:     parsedSkills.length > 0 ? parsedSkills : prev.skills,
+              experience: resumeData.experienceYears?.toString() || prev.experience,
+              education:  resumeData.educationLevel              || prev.education
+            }));
+
+            setHasResume(parsedSkills.length > 0);
+
+            if (parsedSkills.length > 0) {
+              alert(
+                `Resume processed! Found ${parsedSkills.length} skills: ` +
+                `${parsedSkills.slice(0, 5).join(', ')}${parsedSkills.length > 5 ? '...' : ''}`
+              );
+            } else {
+              alert('Resume uploaded but no skills were detected. You can add skills manually.');
+            }
+          }
+        } catch (fetchError) {
+          console.error('Error fetching updated resume:', fetchError);
+          alert('Resume uploaded but extraction is processing. You can manually add skills.');
+        } finally {
+          setIsLoadingResume(false);
+        }
+      }, 2000);
+
     } catch (error) {
       console.error('Error uploading resume:', error);
       setError('Failed to upload resume. Please try again.');
@@ -251,7 +225,7 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!jobId) {
       setError('Job ID is missing. Cannot submit application.');
       return;
@@ -272,23 +246,28 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
       console.log('Skills:', formData.skills);
       console.log('Experience:', formData.experience);
       console.log('Education:', formData.education);
+      console.log('Resume ID:', uploadedResumeId);
 
       const applicationData = {
-        coverLetter: formData.coverLetter,
-        applicantSkills: JSON.stringify(formData.skills),
+        coverLetter:         formData.coverLetter,
+        applicantSkills:     JSON.stringify(formData.skills),
         applicantExperience: parseInt(formData.experience) || 0,
-        applicantEducation: formData.education,
-        resumeFilePath: resumeFile ? `/uploads/resumes/${resumeFile.name}` : '',
-        resumeParsedText: 'Resume content'
+        applicantEducation:  formData.education,
+        resumeId:            uploadedResumeId,
+        resumeFilePath:      uploadedResumePath,
+        resumeParsedText:    'Resume content'
       };
 
-      const response = await api.post(`/jobs/${jobId}/apply-with-resume/${currentUser.id}`, applicationData);
-      
+      const response = await api.post(
+        `/jobs/${jobId}/apply-with-resume/${currentUser.id}`,
+        applicationData
+      );
+
       console.log('✅ Application successful!', response.data);
-      
+
       if (onSuccess) onSuccess();
       onClose();
-      
+
     } catch (error) {
       console.error('❌ Application failed:', error);
       setError(error.response?.data?.error || 'Application failed. Please try again.');
@@ -297,7 +276,6 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
     }
   };
 
-  // Manual refresh function
   const handleManualRefresh = () => {
     setIsLoadingResume(true);
     fetchUserLatestResume();
@@ -353,7 +331,7 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
           {/* Resume Upload Section */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload Resume (Optional but Recommended)
+              Upload Resume (PDF, DOC, DOCX, TXT)
             </label>
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <input
@@ -375,6 +353,14 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
                         <p className="text-sm text-gray-500">
                           {(resumeFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
+                      </div>
+                    </div>
+                  ) : uploadedResumePath ? (
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-6 w-6 text-green-600" />
+                      <div className="text-left">
+                        <p className="font-semibold text-gray-800">Resume already uploaded</p>
+                        <p className="text-sm text-gray-500">Click to upload a new version</p>
                       </div>
                     </div>
                   ) : (
@@ -421,8 +407,7 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Your Skills * ({formData.skills.length} skills found)
             </label>
-            
-            {/* Skills Tags */}
+
             <div className="flex flex-wrap gap-2 mb-3 min-h-[80px] p-3 bg-gray-50 rounded-lg border border-gray-200 max-h-48 overflow-y-auto">
               {formData.skills.map((skill, index) => (
                 <span
@@ -446,7 +431,6 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
               )}
             </div>
 
-            {/* Add New Skill */}
             <div className="flex space-x-2">
               <input
                 type="text"
@@ -488,7 +472,6 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
                 min="0"
                 max="50"
                 step="0.5"
-                disabled={isLoadingResume}
               />
             </div>
 
@@ -503,7 +486,6 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
                 value={formData.education}
                 onChange={handleChange}
                 className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                disabled={isLoadingResume}
               >
                 <option value="">Select education</option>
                 <option value="High School">High School</option>
@@ -523,7 +505,7 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
                 Resume Data Loaded Successfully
               </h4>
               <p className="text-sm text-green-700">
-                Your skills ({formData.skills.length} skills), experience ({formData.experience} years), 
+                Your skills ({formData.skills.length} skills), experience ({formData.experience} years),
                 and education have been automatically extracted from your resume. You can edit them if needed.
               </p>
             </div>
@@ -555,7 +537,7 @@ const JobApplicationModal = ({ job, onClose, onSuccess }) => {
           </div>
         </form>
 
-        {/* Manual refresh button for testing */}
+        {/* Manual refresh button */}
         <div className="mt-4 text-center">
           <button
             type="button"

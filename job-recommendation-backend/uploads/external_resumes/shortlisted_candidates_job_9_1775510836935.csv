@@ -1,0 +1,19 @@
+JOB DETAILS
+Job Title,java
+Company,wipro
+Location,pune
+Job Type,Full-time
+
+SHORTLISTED CANDIDATES
+Full Name,Email,Login Status,Match Percentage,Experience (Years),Education Level
+"Aarav Pawar658",aarav.pawar658@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Arjun Deshmukh693",arjun.deshmukh693@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Arjun Kulkarni819",arjun.kulkarni819@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Arjun Pawar129",arjun.pawar129@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Arjun Pawar462",arjun.pawar462@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Shaurya Deshmukh110",shaurya.deshmukh110@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Shaurya Deshmukh144",shaurya.deshmukh144@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Shaurya Joshi163",shaurya.joshi163@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+"Vihaan Joshi439",vihaan.joshi439@gmail.com,EXISTING USER,100.0%,0,"Bachelor's"
+
+LOGIN URL: http://localhost:3000/login

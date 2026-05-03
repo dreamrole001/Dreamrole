@@ -1,4 +1,4 @@
-// App.jsx
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -11,7 +11,9 @@ import AdminDashboard from "./pages/AdminDashboard";
 import InterviewPage from './pages/InterviewPage';
 import CandidateTest from './components/CandidateTest';
 import TestResults from './pages/TestResults';
-import ProctoringTest from './components/ProctoringTest'; // Import the test component
+import ProctoringTest from './components/ProctoringTest';
+import UserProfile from './pages/UserProfile';
+import Internships from './pages/Internships';
 
 // Your existing components
 import Home from './pages/Home';
@@ -93,6 +95,20 @@ function App() {
             <Route path="/" element={
               <ProtectedRoute user={user}>
                 <Home />
+              </ProtectedRoute>
+            } />
+            
+            {/* Profile Route */}
+            <Route path="/profile" element={
+              <ProtectedRoute user={user}>
+                <UserProfile />
+              </ProtectedRoute>
+            } />
+            
+            {/* Internships Route */}
+            <Route path="/internships" element={
+              <ProtectedRoute user={user}>
+                <Internships />
               </ProtectedRoute>
             } />
             

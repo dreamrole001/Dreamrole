@@ -1,3 +1,4 @@
+// src/main/java/com/jobera/config/WebConfig.java
 package com.jobera.config;
 
 import org.springframework.context.annotation.Configuration;
@@ -33,6 +34,16 @@ public class WebConfig implements WebMvcConfigurer {
                 .setCachePeriod(3600)
                 .resourceChain(true);
         
+        // Specifically for profile pictures
+        Path profilesDir = Paths.get("uploads/profiles").toAbsolutePath().normalize();
+        String profilesPath = "file:" + profilesDir.toString() + "/";
+        
+        registry.addResourceHandler("/uploads/profiles/**")
+                .addResourceLocations(profilesPath)
+                .setCachePeriod(3600)
+                .resourceChain(true);
+        
         System.out.println("✅ Configured uploads directory: " + uploadsPath);
+        System.out.println("✅ Configured profiles directory: " + profilesPath);
     }
 }

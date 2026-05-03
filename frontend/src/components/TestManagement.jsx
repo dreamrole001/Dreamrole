@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, BookOpen, Clock, Target, Users, CheckCircle, XCircle, 
   X, Award, BarChart3, Eye, Send, Filter, Download, Calendar,
-  ChevronDown, ChevronUp, Sparkles
+  ChevronDown, ChevronUp, Sparkles, Briefcase, Building, Loader
 } from 'lucide-react';
 import api from '../services/api';
 import DreamRoleTestCreator from './DreamRoleTestCreator';
@@ -17,6 +17,7 @@ const TestManagement = ({ recruiterId }) => {
   const [showAddQuestions, setShowAddQuestions] = useState(false);
   const [showTestResults, setShowTestResults] = useState(false);
   const [candidates, setCandidates] = useState([]);
+  const [externalCandidates, setExternalCandidates] = useState([]);
   const [testResults, setTestResults] = useState([]);
   const [testStats, setTestStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,8 +50,6 @@ const TestManagement = ({ recruiterId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedTestForResults, setSelectedTestForResults] = useState(null);
-
-  // Interview scheduling state
   const [interviewDate, setInterviewDate] = useState('');
   const [interviewTime, setInterviewTime] = useState('');
   const [interviewLocation, setInterviewLocation] = useState('');
@@ -62,6 +61,8 @@ const TestManagement = ({ recruiterId }) => {
       fetchTests();
       fetchDreamRoleTests();
       fetchTestStats();
+      fetchShortlistedCandidates();
+      fetchExternalShortlistedCandidates();
     }
   }, [recruiterId]);
 
@@ -72,7 +73,6 @@ const TestManagement = ({ recruiterId }) => {
       const response = await api.get(`/aptitude-tests/recruiter/${recruiterId}`);
       console.log('Manual tests fetched:', response.data);
       
-      // Ensure we have an array and set it
       const manualTests = response.data || [];
       setTests(manualTests);
       console.log('Manual tests set to state:', manualTests.length);
@@ -106,6 +106,54 @@ const TestManagement = ({ recruiterId }) => {
     }
   };
 
+  const fetchShortlistedCandidates = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/applications/recruiter/${recruiterId}/by-status?status=SHORTLISTED`);
+      setCandidates(response.data.applications || []);
+    } catch (error) {
+      console.error('Error fetching candidates:', error);
+      setCandidates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchExternalShortlistedCandidates = async () => {
+    try {
+      console.log('Fetching external shortlisted candidates for recruiter:', recruiterId);
+      const response = await api.get(`/external-jobs/recruiter/${recruiterId}/shortlisted-candidates-for-test`);
+      console.log('External candidates response:', response.data);
+      
+      const transformedCandidates = (response.data || []).map(candidate => ({
+        id: candidate.id,
+        candidateId: candidate.id,  // IMPORTANT: Add this for consistency
+        applicantName: candidate.applicantName,
+        applicantEmail: candidate.applicantEmail,
+        applicantPhone: candidate.applicantPhone,
+        applicantExperience: candidate.applicantExperience || 0,
+        applicantEducation: candidate.applicantEducation || 'Not specified',
+        applicantSkills: candidate.applicantSkills || '[]',
+        matchPercentage: candidate.matchPercentage || 0,
+        matchedSkills: candidate.matchedSkills,
+        missingSkills: candidate.missingSkills,
+        status: candidate.status,
+        hasTest: candidate.hasTest || false,
+        isExternalCandidate: true,
+        isExistingUser: candidate.isExistingUser,
+        passwordStatus: candidate.passwordStatus,
+        job: candidate.job,
+        testAssignmentId: candidate.testAssignmentId
+      }));
+      
+      setExternalCandidates(transformedCandidates);
+      console.log('Transformed external candidates:', transformedCandidates.length);
+    } catch (error) {
+      console.error('Error fetching external shortlisted candidates:', error);
+      setExternalCandidates([]);
+    }
+  };
+
   const fetchTestResults = async (testId, isDreamRole = false) => {
     try {
       setLoading(true);
@@ -114,36 +162,21 @@ const TestManagement = ({ recruiterId }) => {
       if (isDreamRole) {
         const test = dreamRoleTests.find(t => t.id === testId);
         setSelectedTestForResults(test);
-        
         const response = await api.get(`/dream-role-tests/test/${testId}/results/unscheduled`);
         console.log('DreamRole test results:', response.data);
         setTestResults(response.data.results || []);
       } else {
         const test = tests.find(t => t.id === testId);
         setSelectedTestForResults(test);
-        
         const response = await api.get(`/aptitude-tests/test/${testId}/results/unscheduled`);
         console.log('Manual test results:', response.data);
         setTestResults(response.data.results || []);
       }
       
       setShowTestResults(true);
-      
     } catch (error) {
       console.error('Error fetching test results:', error);
       alert('Failed to fetch test results: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchShortlistedCandidates = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get(`/applications/recruiter/${recruiterId}/by-status?status=SHORTLISTED`);
-      setCandidates(response.data.applications || []);
-    } catch (error) {
-      console.error('Error fetching candidates:', error);
     } finally {
       setLoading(false);
     }
@@ -156,21 +189,13 @@ const TestManagement = ({ recruiterId }) => {
         return;
       }
 
-      console.log('Creating manual test with data:', {
-        recruiterId,
-        ...newTest
-      });
-
       const response = await api.post('/aptitude-tests/create', {
         recruiterId,
         ...newTest
       });
       
-      console.log('Manual test created:', response.data);
       alert('Manual test created successfully! Now add questions.');
-      
       await fetchTests();
-      
       setSelectedTest(response.data.test);
       setShowCreateForm(false);
       setShowAddQuestions(true);
@@ -218,40 +243,88 @@ const TestManagement = ({ recruiterId }) => {
     }
     
     try {
-      console.log('Saving questions for test:', selectedTest.id);
       const response = await api.post(`/aptitude-tests/${selectedTest.id}/add-multiple-questions`, questions);
       alert(response.data.message);
       setShowAddQuestions(false);
       setQuestions([]);
       await fetchTests();
-      
     } catch (error) {
       console.error('Error saving questions:', error);
       alert('Failed to save questions: ' + (error.response?.data?.error || error.message));
     }
   };
 
-  const handleAssignTest = async (applicationId, testId, isDreamRole = false) => {
+  // FIXED: handleAssignTest for external candidates
+  const handleAssignTest = async (candidateId, testId, isDreamRole = false, isExternalCandidate = false) => {
     try {
-      if (isDreamRole) {
-        await api.post('/dream-role-tests/assign', {
+      console.log("=== ASSIGN TEST CALLED ===");
+      console.log("Candidate ID:", candidateId);
+      console.log("Test ID:", testId);
+      console.log("Is DreamRole:", isDreamRole);
+      console.log("Is External Candidate:", isExternalCandidate);
+      console.log("Deadline Hours:", deadlineHours);
+      
+      let response;
+      
+      if (isExternalCandidate) {
+        // Special endpoint for external candidates - FIXED endpoint path
+        console.log("Calling external candidate test assignment endpoint...");
+        console.log("Request payload:", {
+          candidateId: candidateId,
+          testId: testId,
+          deadlineHours: deadlineHours,
+          isDreamRoleTest: isDreamRole
+        });
+        
+        response = await api.post('/external-jobs/assign-test', {
+          candidateId: candidateId,
+          testId: testId,
+          deadlineHours: deadlineHours,
+          isDreamRoleTest: isDreamRole
+        });
+        console.log("External test assignment response:", response.data);
+      } else if (isDreamRole) {
+        console.log("Calling DreamRole test assignment...");
+        response = await api.post('/dream-role-tests/assign', {
           testId,
-          applicationId,
+          applicationId: candidateId,
           deadlineHours
         });
       } else {
-        await api.post('/aptitude-tests/assign', {
+        console.log("Calling manual test assignment...");
+        response = await api.post('/aptitude-tests/assign', {
           testId,
-          applicationId,
+          applicationId: candidateId,
           deadlineHours
         });
       }
       
-      alert('Test assigned successfully!');
-      await fetchShortlistedCandidates();
+      if (response.data && (response.data.message || response.data.assignmentId)) {
+        alert('Test assigned successfully! The candidate can now take the test.');
+        
+        // Refresh both lists
+        await fetchShortlistedCandidates();
+        await fetchExternalShortlistedCandidates();
+      }
       
     } catch (error) {
-      alert('Failed to assign test: ' + (error.response?.data?.error || error.message));
+      console.error('Error assigning test:', error);
+      console.error('Error response:', error.response);
+      
+      let errorMessage = 'Failed to assign test: ';
+      if (error.response?.data?.error) {
+        errorMessage += error.response.data.error;
+      } else if (error.response?.status === 405) {
+        errorMessage += 'Method not allowed. Please check if the backend endpoint is properly configured.';
+      } else if (error.response?.status === 404) {
+        errorMessage += 'Endpoint not found. Please check if the backend is running.';
+      } else if (error.response?.status === 500) {
+        errorMessage += 'Server error. Please check backend logs.';
+      } else {
+        errorMessage += error.message;
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -282,7 +355,6 @@ const TestManagement = ({ recruiterId }) => {
       setInterviewLocation('');
       setInterviewNotes('');
       
-      // Immediately remove the scheduled candidate from the current test results
       setTestResults(prevResults => 
         prevResults.filter(result => result.applicationId !== selectedCandidate.applicationId)
       );
@@ -333,21 +405,42 @@ const TestManagement = ({ recruiterId }) => {
     return tomorrow.toISOString().split('T')[0];
   };
 
-  const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = candidate.applicantName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidate.applicantEmail?.toLowerCase().includes(searchTerm.toLowerCase());
+  const getFilteredCandidates = () => {
+    let allCandidates = [...candidates, ...externalCandidates];
     
-    if (filterStatus === 'all') return matchesSearch;
-    if (filterStatus === 'assigned') return matchesSearch && candidate.hasTest;
-    if (filterStatus === 'not-assigned') return matchesSearch && !candidate.hasTest;
+    const uniqueCandidates = [];
+    const emailSet = new Set();
+    for (const candidate of allCandidates) {
+      if (!emailSet.has(candidate.applicantEmail)) {
+        emailSet.add(candidate.applicantEmail);
+        uniqueCandidates.push(candidate);
+      }
+    }
     
-    return matchesSearch;
-  });
+    let filtered = uniqueCandidates;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(candidate => 
+        candidate.applicantName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        candidate.applicantEmail?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (filterStatus === 'assigned') {
+      filtered = filtered.filter(c => c.hasTest === true);
+    } else if (filterStatus === 'not-assigned') {
+      filtered = filtered.filter(c => c.hasTest !== true);
+    }
+    
+    return filtered;
+  };
+
+  const filteredCandidates = getFilteredCandidates();
 
   if (loading && activeTab !== 'tests') {
     return (
       <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
         <p className="mt-2 text-gray-600">Loading...</p>
       </div>
     );
@@ -399,6 +492,7 @@ const TestManagement = ({ recruiterId }) => {
             onClick={() => {
               setActiveTab('assign');
               fetchShortlistedCandidates();
+              fetchExternalShortlistedCandidates();
             }}
             className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
               activeTab === 'assign'
@@ -446,7 +540,7 @@ const TestManagement = ({ recruiterId }) => {
             </div>
           </div>
 
-          {/* Manual Tests - FIXED: Always show this section */}
+          {/* Manual Tests */}
           <div className="mb-8">
             <h4 className="font-medium text-gray-700 mb-3">Manual Tests</h4>
             {tests.length > 0 ? (
@@ -617,7 +711,6 @@ const TestManagement = ({ recruiterId }) => {
             <div className="bg-white rounded-lg shadow p-4">
               <h4 className="font-semibold mb-3">Select Test</h4>
               
-              {/* Manual Tests Section */}
               {tests.length > 0 && (
                 <div className="mb-4">
                   <h5 className="text-sm font-medium text-gray-600 mb-2">Manual Tests</h5>
@@ -642,7 +735,6 @@ const TestManagement = ({ recruiterId }) => {
                 </div>
               )}
 
-              {/* DreamRole Tests Section */}
               {dreamRoleTests.length > 0 && (
                 <div className="mb-4">
                   <h5 className="text-sm font-medium text-gray-600 mb-2 flex items-center">
@@ -743,6 +835,9 @@ const TestManagement = ({ recruiterId }) => {
                 <div className="text-center py-8">
                   <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <p className="text-gray-500">No shortlisted candidates found</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Candidates will appear here after they are shortlisted from job applications or external jobs.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -750,21 +845,46 @@ const TestManagement = ({ recruiterId }) => {
                     <div key={candidate.id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center flex-wrap gap-2">
                             <h5 className="font-medium">{candidate.applicantName}</h5>
-                            {candidate.status === 'INTERVIEW_SCHEDULED' && (
-                              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-                                Interview Scheduled
+                            
+                            {candidate.isExternalCandidate && (
+                              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium flex items-center">
+                                <Briefcase className="h-3 w-3 mr-1" />
+                                External Job
+                              </span>
+                            )}
+                            
+                            {candidate.isExistingUser && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                Existing User
+                              </span>
+                            )}
+                            
+                            {candidate.matchPercentage > 0 && (
+                              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                {Math.round(candidate.matchPercentage)}% Match
                               </span>
                             )}
                           </div>
                           <p className="text-sm text-gray-600">{candidate.applicantEmail}</p>
-                          <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                            <span>Job: {candidate.job?.title}</span>
-                            <span>Exp: {candidate.applicantExperience} years</span>
-                            {candidate.matchPercentage > 0 && (
-                              <span className="text-green-600 font-medium">{candidate.matchPercentage}% Match</span>
+                          
+                          <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500 flex-wrap gap-2">
+                            {candidate.job ? (
+                              <>
+                                <span className="flex items-center">
+                                  <Briefcase className="h-3 w-3 mr-1" />
+                                  {candidate.job.title}
+                                </span>
+                                <span className="flex items-center">
+                                  <Building className="h-3 w-3 mr-1" />
+                                  {candidate.job.company}
+                                </span>
+                              </>
+                            ) : (
+                              <span>Job: {candidate.job?.title || 'Regular Application'}</span>
                             )}
+                            <span>Exp: {candidate.applicantExperience} years</span>
                           </div>
                         </div>
                         
@@ -774,7 +894,12 @@ const TestManagement = ({ recruiterId }) => {
                           </span>
                         ) : (
                           <button
-                            onClick={() => handleAssignTest(candidate.id, selectedTest?.id, selectedTest?.type === 'dreamrole')}
+                            onClick={() => handleAssignTest(
+                              candidate.id, 
+                              selectedTest?.id, 
+                              selectedTest?.type === 'dreamrole',
+                              candidate.isExternalCandidate || false
+                            )}
                             disabled={!selectedTest}
                             className={`px-3 py-1 rounded-lg text-sm font-medium flex items-center ${
                               selectedTest
@@ -806,7 +931,6 @@ const TestManagement = ({ recruiterId }) => {
             <div className="bg-white rounded-lg shadow p-4">
               <h4 className="font-semibold mb-3">Your Tests</h4>
               
-              {/* Manual Tests */}
               {tests.length > 0 && (
                 <div className="mb-4">
                   <h5 className="text-sm font-medium text-gray-600 mb-2">Manual Tests</h5>
@@ -829,7 +953,6 @@ const TestManagement = ({ recruiterId }) => {
                 </div>
               )}
 
-              {/* DreamRole Tests */}
               {dreamRoleTests.length > 0 && (
                 <div>
                   <h5 className="text-sm font-medium text-gray-600 mb-2 flex items-center">
@@ -872,7 +995,6 @@ const TestManagement = ({ recruiterId }) => {
                   </div>
                 ) : (
                   <>
-                    {/* Summary Stats */}
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div className="bg-green-50 p-3 rounded-lg text-center">
                         <div className="text-2xl font-bold text-green-600">
@@ -894,7 +1016,6 @@ const TestManagement = ({ recruiterId }) => {
                       </div>
                     </div>
 
-                    {/* Candidates Results */}
                     <div className="space-y-3 max-h-96 overflow-y-auto">
                       {testResults.map((result, index) => (
                         <div key={index} className="border border-gray-200 rounded-lg p-3">
@@ -933,7 +1054,6 @@ const TestManagement = ({ recruiterId }) => {
                                         {result.passed ? 'PASSED' : 'FAILED'}
                                       </span>
                                       
-                                      {/* Schedule Interview Button for Passed Candidates */}
                                       {result.passed && (
                                         <button
                                           onClick={() => openScheduleInterview({
@@ -1062,10 +1182,7 @@ const TestManagement = ({ recruiterId }) => {
                   Add questions for the manual test. Current: {questions.length} questions
                 </p>
               </div>
-              <button
-                onClick={() => setShowAddQuestions(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <button onClick={() => setShowAddQuestions(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>

@@ -1,0 +1,36 @@
+RESUME
+======
+
+Applicant: satej
+Email: satejrajeshirke007@gmail.com
+Phone: +919156994716
+
+Experience: 4 years
+Education: Bachelor's Degree
+
+SKILLS
+======
+- css
+- python
+- rest api
+- maven
+- react
+- bootstrap
+- javascript
+- spring
+- spring boot
+- fastapi
+- java
+- nlp
+- git
+- mysql
+- html
+
+COVER LETTER
+============
+I am very interested in this position and believe my skills are a great match.
+
+---
+Generated from JobEra Application System
+Application Date: 2026-02-14T19:34:08
+Application ID: 82

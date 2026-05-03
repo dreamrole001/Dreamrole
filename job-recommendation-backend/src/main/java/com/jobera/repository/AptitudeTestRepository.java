@@ -1,4 +1,3 @@
-// Ensure this method exists in AptitudeTestRepository.java
 package com.jobera.repository;
 
 import java.util.List;

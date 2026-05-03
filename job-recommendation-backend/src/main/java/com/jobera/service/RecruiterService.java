@@ -19,7 +19,7 @@ public class RecruiterService {
         this.recruiterRepository = recruiterRepository;
         this.userRepository = userRepository;
     }
-    
+
     public Recruiter registerRecruiter(Long userId, String companyName, String companyDescription, 
                                       String companyWebsite, String companySize, String industry,
                                       String contactEmail, String contactPhone) {
